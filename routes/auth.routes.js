@@ -2,6 +2,7 @@ const { Router } = require("express");
 const router = Router();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const config = require("config");
 const { check, validationResult } = require("express-validator");
 const User = require("../models/User");
 
@@ -32,6 +33,7 @@ router.post(
       }
       const hashedPassword = await bcrypt.hash(password, 12);
       const user = new User({ email, password: hashedPassword });
+      console.log("user", user);
       await user.save();
       res.status(201).json({ message: "Пользователь создан" });
     } catch (e) {
@@ -59,19 +61,23 @@ router.post(
         });
       }
       const { email, password } = req.body;
+
       const user = await User.findOne({ email });
       if (!user) {
         return res.status(400).json({ message: "Пользователь не найден" });
       }
+
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
         return res
           .status(400)
           .json({ message: "Неверный пароль, попробуйте снова" });
       }
+
       const token = jwt.sign({ userId: user.id }, config.get("jwtSecret"), {
         expiresIn: "1h"
       });
+
       res.json({ token, userId: user.id });
     } catch (e) {
       res
